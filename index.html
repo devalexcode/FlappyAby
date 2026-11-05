@@ -171,29 +171,22 @@ document.title=`FlappyAby — ${TARGET} obstáculos para ganar`;
  
 
 let state='ready', birdY=H*.44, vy=0, pipes=[], score=0, frame=0, elapsed=0, last=0, shake=0;
-// Cada 10 puntos hay un BOOST hasta los 80; después, cada 5 (85, 90 y 95).
-// Se conserva la aceleración original de los primeros 80 puntos y se añade un
-// tramo final moderado, sin disparar la dificultad antes de los 100 puntos.
-const gravity=.36, jump=-6.25, BASE_SPEED=2.25, MAX_SPEED=3.95;
-const SPEED_STEP=10, BOOST_RAPIDO_DESDE=80, BOOST_RAPIDO_CADA=5, FULL_SPEED_AT=95;
-const VELOCIDAD_ORIGINAL_MAX=3.75, NIVEL_ORIGINAL_MAX=9;
+// BOOST cada 10 puntos hasta el 70; desde ahí, cada 5: 75, 80, 85, 90 y 95.
+// La velocidad aumenta con el MISMO incremento en cada BOOST, sin tope artificial.
+// Solo termina de aumentar cuando acaba la partida (100 puntos).
+const gravity=.36, jump=-6.25, BASE_SPEED=2.25;
+const SPEED_STEP=10, BOOST_RAPIDO_DESDE=70, BOOST_RAPIDO_CADA=5;
+const INCREMENTO_VELOCIDAD_POR_BOOST=(3.75-BASE_SPEED)/9;
 function boostLevelForScore(passed){
- const p=Math.max(0,Math.min(FULL_SPEED_AT,passed));
+ const p=Math.max(0,passed);
  const normales=Math.floor(Math.min(p,BOOST_RAPIDO_DESDE)/SPEED_STEP);
  const rapidos=Math.floor(Math.max(0,p-BOOST_RAPIDO_DESDE)/BOOST_RAPIDO_CADA);
  return normales+rapidos;
 }
 function speedForScore(passed){
- const p=Math.max(0,Math.min(FULL_SPEED_AT,passed));
- const normales=Math.floor(Math.min(p,BOOST_RAPIDO_DESDE)/SPEED_STEP);
- const rapidos=Math.floor(Math.max(0,p-BOOST_RAPIDO_DESDE)/BOOST_RAPIDO_CADA);
- // Primeros 80 puntos: idénticos incrementos a la versión anterior.
- const velocidadNormal=BASE_SPEED+(VELOCIDAD_ORIGINAL_MAX-BASE_SPEED)*normales/NIVEL_ORIGINAL_MAX;
- const velocidadEn80=BASE_SPEED+(VELOCIDAD_ORIGINAL_MAX-BASE_SPEED)*(BOOST_RAPIDO_DESDE/SPEED_STEP)/NIVEL_ORIGINAL_MAX;
- const boostsFinales=(FULL_SPEED_AT-BOOST_RAPIDO_DESDE)/BOOST_RAPIDO_CADA;
- return Math.min(MAX_SPEED,velocidadNormal+rapidos*(MAX_SPEED-velocidadEn80)/boostsFinales);
+ return BASE_SPEED+INCREMENTO_VELOCIDAD_POR_BOOST*boostLevelForScore(passed);
 }
-// Con cada BOOST también se reduce el hueco vertical, sin bajar de 148 px.
+// Cada BOOST reduce 3 px el hueco; se conserva el mínimo solicitado de 148 px.
 const GAP_INICIAL=175, GAP_MINIMO=148, REDUCCION_GAP_POR_BOOST=3;
 function gapForScore(passed){
  return Math.max(GAP_MINIMO,GAP_INICIAL-boostLevelForScore(passed)*REDUCCION_GAP_POR_BOOST);
@@ -428,7 +421,7 @@ function panel(title,text,icon,cta){
 function triggerBoost(level){
  if(level<=0)return;
  if(boostTimer)clearTimeout(boostTimer);
- const ratio=Math.round(((speed-BASE_SPEED)/(MAX_SPEED-BASE_SPEED))*100);
+ const ratio=Math.round((speed/BASE_SPEED-1)*100);
  boostText.textContent=`¡Velocidad +${ratio}%!`;
  boostLevel.textContent=`Nivel ${level+1} · ${score} puntos`;
  boostOverlay.classList.remove('show');
@@ -563,10 +556,10 @@ function update(dt){
     p.passed=true;
     score++;
     scoreEl.textContent=score;
-    // BOOST cada 10 puntos hasta 80; después cada 5 hasta 95.
+    // BOOST cada 10 puntos hasta 70; luego cada 5 (75, 80, 85, 90 y 95).
     speed=speedForScore(score);
     const boostLevelNow=boostLevelForScore(score);
-    if(score>0 && score<=FULL_SPEED_AT && boostLevelNow>lastBoostLevel){
+    if(score>0 && score<TARGET && boostLevelNow>lastBoostLevel){
       lastBoostLevel=boostLevelNow;
       triggerBoost(boostLevelNow);
     }
