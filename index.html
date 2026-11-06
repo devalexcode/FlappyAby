@@ -195,6 +195,9 @@ function gapForScore(passed){
 const PIPE_SPACING=BASE_SPEED*106;
 let speed=BASE_SPEED, scrollDistance=0, spawnedObstacles=0;
 let soundCtx, boostTimer=0, lastBoostLevel=0;
+// Volumen general más alto. Se pueden editar por separado sin cambiar la melodía.
+const VOLUMEN_MUSICA = 3.0;
+const VOLUMEN_EFECTOS = 1.9;
 // Música original sintetizada: no requiere archivos ni conexión.
 // Se toca solo durante la partida y no bloquea el resto del juego.
 let musicGain=null, musicInterval=null, musicStep=0, nextMusicTime=0;
@@ -210,7 +213,7 @@ function ensureAudio(){
  }catch(e){return null;}
 }
 function chirp(freq=700,dur=.08,type='sine'){
- try{const audio=ensureAudio();if(!audio)return;let osc=audio.createOscillator(),gain=audio.createGain();osc.type=type;osc.frequency.setValueAtTime(freq,audio.currentTime);osc.frequency.exponentialRampToValueAtTime(Math.max(90,freq*.65),audio.currentTime+dur);gain.gain.setValueAtTime(.085,audio.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audio.currentTime+dur);osc.connect(gain).connect(audio.destination);osc.start();osc.stop(audio.currentTime+dur)}catch(e){}
+ try{const audio=ensureAudio();if(!audio)return;let osc=audio.createOscillator(),gain=audio.createGain();osc.type=type;osc.frequency.setValueAtTime(freq,audio.currentTime);osc.frequency.exponentialRampToValueAtTime(Math.max(90,freq*.65),audio.currentTime+dur);gain.gain.setValueAtTime(.085*VOLUMEN_EFECTOS,audio.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audio.currentTime+dur);osc.connect(gain).connect(audio.destination);osc.start();osc.stop(audio.currentTime+dur)}catch(e){}
 }
 function playMusicNote(note,time,duration,shape,volume){
  if(note===null || !soundCtx || !musicGain)return;
@@ -244,7 +247,7 @@ function startMusic(){
  try{
   if(!musicGain){musicGain=audio.createGain();musicGain.gain.value=0;musicGain.connect(audio.destination);}
   musicGain.gain.cancelScheduledValues(audio.currentTime);
-  musicGain.gain.setTargetAtTime(.65,audio.currentTime,.035);
+  musicGain.gain.setTargetAtTime(.65*VOLUMEN_MUSICA,audio.currentTime,.035);
   musicStep=0;nextMusicTime=audio.currentTime+.06;
   musicTick();
   musicInterval=setInterval(musicTick,90);
@@ -464,7 +467,26 @@ async function reset(){
   }
  }
 }
-function flap(){if(state==='playing'){vy=jump;chirp(620,.055)}}
+// Vibración progresiva desde los 60 puntos: aumenta con cada BOOST real.
+// BOOST normales en 60 y 70; luego cada 5 puntos (75, 80, 85, 90 y 95).
+// Sin vibración antes de los 60. Si el teléfono no admite vibración, no interrumpe el juego.
+const PUNTOS_INICIO_VIBRACION = 60;
+const DURACION_VIBRACION_INICIAL_MS = 45;
+const AUMENTO_VIBRACION_POR_BOOST_MS = 15;
+function duracionVibracionParaPuntos(puntos){
+ if(puntos<PUNTOS_INICIO_VIBRACION)return 0;
+ const boostsDesde60=boostLevelForScore(puntos)-boostLevelForScore(PUNTOS_INICIO_VIBRACION);
+ return DURACION_VIBRACION_INICIAL_MS + boostsDesde60*AUMENTO_VIBRACION_POR_BOOST_MS;
+}
+function flap(){
+ if(state!=='playing')return;
+ vy=jump;
+ chirp(620,.055);
+ const duracionMs=duracionVibracionParaPuntos(score);
+ if(duracionMs>0 && typeof navigator.vibrate==='function'){
+  try{navigator.vibrate(duracionMs);}catch(_error){/* vibración no disponible */}
+ }
+}
 // Solo el botón REINTENTAR reinicia una partida perdida: los toques y la
 // barra espaciadora usados para aletear no deben reiniciar al chocar.
 let defeatAt=-Infinity;
