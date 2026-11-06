@@ -61,7 +61,7 @@ canvas{width:100%;height:100%;display:block;image-rendering:pixelated;background
 /* Vista previa de cámara frontal, integrada con la interfaz rosa. */
 .camera-box{position:absolute;left:11px;bottom:76px;width:105px;height:174px;z-index:2;overflow:hidden;border-radius:15px;border:3px solid #fff;background:linear-gradient(150deg,#ffeaf5,#f4b1d1);box-shadow:0 0 0 3px #e67bae,0 5px 13px #8847677c;pointer-events:none;isolation:isolate}
 .camera-box::after{content:'';position:absolute;inset:0;border:1px solid #ffffff70;border-radius:11px;pointer-events:none}
-.camera-video{width:100%;height:100%;display:block;object-fit:cover;object-position:center;transform:scaleX(-1);background:#f9d0e4}
+.camera-video{width:100%;height:100%;display:block;object-fit:contain;object-position:center;transform:scaleX(-1);background:#f9d0e4}
 .camera-box[data-active="true"] .camera-video{display:block}
 .camera-label{position:absolute;top:5px;left:5px;padding:3px 7px;border-radius:8px;background:#d53d83d9;border:1px solid #fff8;font-size:9px;font-weight:1000;color:white;letter-spacing:.05em;text-shadow:0 1px #8c255d;z-index:1}
 .camera-indicator{display:inline-block;width:5px;height:5px;vertical-align:middle;margin-right:3px;border-radius:50%;background:#ffe6f3}
@@ -161,11 +161,11 @@ const OBSTACULOS_PARA_GANAR = 100;
 // Tiempo de espera para la foto de reacción (segundos). Cambia solo este número.
 const SEGUNDOS_FOTOREACCION = 2;
 const REACTION_DELAY_MS = SEGUNDOS_FOTOREACCION * 1000;
-// La foto de reacción se guarda vertical en 9:16 (portrait).
-// Usa todo el alto disponible del vídeo y recorta los laterales si es necesario;
-// nunca se deforma ni se estira la imagen.
-const FOTO_REACCION_ANCHO = 360;
-const FOTO_REACCION_ALTO = 640;
+// Capturar el fotograma COMPLETO de la cámara, sin zoom ni recorte.
+// Límites solo para reducir el tamaño del JPEG enviado a n8n;
+// la proporción original siempre se conserva.
+const FOTO_REACCION_MAX_ANCHO = 960;
+const FOTO_REACCION_MAX_ALTO = 1280;
 // URL del webhook de n8n. Para producción, usar la URL /webhook/ correspondiente.
 const URL_ENDPOINT_RESULTADOS = 'https://n8n.intelixlabs.com/webhook/juego/flappyaby';
 const TIMEOUT_ENVIO_MS = 10000;
@@ -326,7 +326,7 @@ async function startCamera(){
  try{
   if(!stream){
    try{
-    stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'user'},width:{ideal:720},height:{ideal:1280},aspectRatio:{ideal:9/16}}});
+    stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'user'}}});
    }catch(firstError){
     // Algunos teléfonos no aceptan las restricciones preferidas; probar cámara predeterminada.
     if(['NotFoundError','OverconstrainedError'].includes(firstError?.name)){
@@ -380,28 +380,19 @@ function captureResultPhoto(){
  const canCapture=cameraIsReady();
  if(!canCapture){lossPhoto.hidden=true;lossPhotoFallback.hidden=false;return null;}
  try{
-  const snap=document.createElement('canvas');
-  snap.width=FOTO_REACCION_ANCHO;
-  snap.height=FOTO_REACCION_ALTO;
-  const snapCtx=snap.getContext('2d');
-  // Adaptar el fotograma de la cámara a un retrato 9:16 sin deformarlo.
-  // Priorizar el alto: si la cámara proporciona un vídeo más ancho,
-  // se recortan únicamente los laterales, manteniendo toda su altura.
+  // Usar la resolución REAL que entrega la cámara; NO forzar 9:16.
   const sourceWidth=cameraVideo.videoWidth;
   const sourceHeight=cameraVideo.videoHeight;
-  const aspectRatioFoto=snap.width/snap.height;
-  const aspectRatioVideo=sourceWidth/sourceHeight;
-  let cropWidth=sourceWidth,cropHeight=sourceHeight;
-  if(aspectRatioVideo>aspectRatioFoto){
-   cropWidth=sourceHeight*aspectRatioFoto;
-  }else{
-   cropHeight=sourceWidth/aspectRatioFoto;
-  }
-  const sourceX=(sourceWidth-cropWidth)/2;
-  const sourceY=(sourceHeight-cropHeight)/2;
-  // Espejo horizontal, igual que la vista previa de selfie.
-  snapCtx.translate(snap.width,0);snapCtx.scale(-1,1);
-  snapCtx.drawImage(cameraVideo,sourceX,sourceY,cropWidth,cropHeight,0,0,snap.width,snap.height);
+  if(!sourceWidth || !sourceHeight)throw new Error('Video sin dimensiones');
+  const scale=Math.min(1,FOTO_REACCION_MAX_ANCHO/sourceWidth,FOTO_REACCION_MAX_ALTO/sourceHeight);
+  const snap=document.createElement('canvas');
+  snap.width=Math.max(1,Math.round(sourceWidth*scale));
+  snap.height=Math.max(1,Math.round(sourceHeight*scale));
+  const snapCtx=snap.getContext('2d');
+  // Foto frontal espejada como la vista previa, sin recortar ni ampliar.
+  snapCtx.translate(snap.width,0);
+  snapCtx.scale(-1,1);
+  snapCtx.drawImage(cameraVideo,0,0,sourceWidth,sourceHeight,0,0,snap.width,snap.height);
   const foto=snap.toDataURL('image/jpeg',.86);
   lossPhoto.src=foto;
   lossPhoto.hidden=false;lossPhotoFallback.hidden=true;
