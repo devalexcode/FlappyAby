@@ -171,23 +171,26 @@ document.title=`FlappyAby — ${TARGET} obstáculos para ganar`;
  
 
 let state='ready', birdY=H*.44, vy=0, pipes=[], score=0, frame=0, elapsed=0, last=0, shake=0;
-// BOOST cada 10 puntos hasta el 70; desde ahí, cada 5: 75, 80, 85, 90 y 95.
+// BOOST cada 10 puntos hasta el 70, cada 5 en 75 y 80, y cada 3 desde ahí: 83, 86, 89, 92, 95 y 98.
 // La velocidad aumenta con el MISMO incremento en cada BOOST, sin tope artificial.
 // Solo termina de aumentar cuando acaba la partida (100 puntos).
 const gravity=.36, jump=-6.25, BASE_SPEED=2.25;
-const SPEED_STEP=10, BOOST_RAPIDO_DESDE=70, BOOST_RAPIDO_CADA=5;
+const SPEED_STEP=10;
+const BOOST_CADA_5_DESDE=70, BOOST_CADA_3_DESDE=80;
+const BOOST_MEDIO_CADA=5, BOOST_FINAL_CADA=3;
 const INCREMENTO_VELOCIDAD_POR_BOOST=(3.75-BASE_SPEED)/9;
 function boostLevelForScore(passed){
  const p=Math.max(0,passed);
- const normales=Math.floor(Math.min(p,BOOST_RAPIDO_DESDE)/SPEED_STEP);
- const rapidos=Math.floor(Math.max(0,p-BOOST_RAPIDO_DESDE)/BOOST_RAPIDO_CADA);
- return normales+rapidos;
+ const normales=Math.floor(Math.min(p,BOOST_CADA_5_DESDE)/SPEED_STEP);
+ const medios=Math.floor(Math.max(0,Math.min(p,BOOST_CADA_3_DESDE)-BOOST_CADA_5_DESDE)/BOOST_MEDIO_CADA);
+ const finales=Math.floor(Math.max(0,p-BOOST_CADA_3_DESDE)/BOOST_FINAL_CADA);
+ return normales+medios+finales;
 }
 function speedForScore(passed){
  return BASE_SPEED+INCREMENTO_VELOCIDAD_POR_BOOST*boostLevelForScore(passed);
 }
-// Cada BOOST reduce 3 px el hueco; se conserva el mínimo solicitado de 148 px.
-const GAP_INICIAL=175, GAP_MINIMO=148, REDUCCION_GAP_POR_BOOST=3;
+// Cada BOOST reduce 3 px el hueco; mínimo de 140 px.
+const GAP_INICIAL=175, GAP_MINIMO=140, REDUCCION_GAP_POR_BOOST=3;
 function gapForScore(passed){
  return Math.max(GAP_MINIMO,GAP_INICIAL-boostLevelForScore(passed)*REDUCCION_GAP_POR_BOOST);
 }
@@ -468,7 +471,7 @@ async function reset(){
  }
 }
 // Vibración progresiva desde los 60 puntos: aumenta con cada BOOST real.
-// BOOST normales en 60 y 70; luego cada 5 puntos (75, 80, 85, 90 y 95).
+// BOOST en 60 y 70, luego en 75 y 80; desde entonces en 83, 86, 89, 92, 95 y 98.
 // Sin vibración antes de los 60. Si el teléfono no admite vibración, no interrumpe el juego.
 const PUNTOS_INICIO_VIBRACION = 60;
 const DURACION_VIBRACION_INICIAL_MS = 45;
@@ -578,7 +581,7 @@ function update(dt){
     p.passed=true;
     score++;
     scoreEl.textContent=score;
-    // BOOST cada 10 puntos hasta 70; luego cada 5 (75, 80, 85, 90 y 95).
+    // BOOST cada 10 hasta 70, cada 5 hasta 80 y cada 3 desde 80 (83, 86, 89, 92, 95 y 98).
     speed=speedForScore(score);
     const boostLevelNow=boostLevelForScore(score);
     if(score>0 && score<TARGET && boostLevelNow>lastBoostLevel){
