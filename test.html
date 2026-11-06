@@ -59,7 +59,7 @@ canvas{width:100%;height:100%;display:block;image-rendering:pixelated;background
 @media(prefers-reduced-motion:reduce){.boost-overlay.show,.boost-rays,.boost-overlay.show .boost-card{animation:none}.boost-overlay.show{opacity:1}.boost-card{transform:scale(1)}}
 
 /* Vista previa de cámara frontal, integrada con la interfaz rosa. */
-.camera-box{position:absolute;left:11px;bottom:76px;width:105px;height:134px;z-index:2;overflow:hidden;border-radius:15px;border:3px solid #fff;background:linear-gradient(150deg,#ffeaf5,#f4b1d1);box-shadow:0 0 0 3px #e67bae,0 5px 13px #8847677c;pointer-events:none;isolation:isolate}
+.camera-box{position:absolute;left:11px;bottom:76px;width:99px;height:176px;z-index:2;overflow:hidden;border-radius:15px;border:3px solid #fff;background:linear-gradient(150deg,#ffeaf5,#f4b1d1);box-shadow:0 0 0 3px #e67bae,0 5px 13px #8847677c;pointer-events:none;isolation:isolate}
 .camera-box::after{content:'';position:absolute;inset:0;border:1px solid #ffffff70;border-radius:11px;pointer-events:none}
 .camera-video{width:100%;height:100%;display:block;object-fit:contain;transform:none;background:#f9d0e4}
 .camera-box[data-active="true"] .camera-video{display:block}
@@ -79,7 +79,7 @@ canvas{width:100%;height:100%;display:block;image-rendering:pixelated;background
 .loss-photo-fallback[hidden]{display:none!important}
 .camera-disclosure{font-size:10px!important;line-height:1.3!important;margin:0 auto 12px!important;color:#985d80!important}
 .panel{max-height:calc(100dvh - 34px);overflow-y:auto;overscroll-behavior:contain}
-@media(max-width:380px){.camera-box{left:8px;bottom:75px;width:91px;height:119px}.camera-placeholder{font-size:9px;padding:29px 6px 5px}}
+@media(max-width:380px){.camera-box{left:8px;bottom:75px;width:86px;height:153px}.camera-placeholder{font-size:9px;padding:29px 6px 5px}}
 
 /* Ventana final compacta: mensaje de premio y foto visibles en una captura. */
 .panel[data-state="won"]{padding:11px 12px 13px}
@@ -322,11 +322,23 @@ async function startCamera(){
  try{
   if(!stream){
    try{
-    stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'user'},width:{ideal:480},height:{ideal:640}}});
+    // El vídeo empieza en formato selfie 9:16 desde la activación de cámara.
+    // Solicitamos un flujo NATIVO vertical, sin crop-and-scale del navegador.
+    // No transformamos el vídeo ni la fotografía resultante.
+    const opcionesVideo={
+     facingMode:{ideal:'user'},
+     width:{ideal:720},
+     height:{ideal:1280},
+     aspectRatio:{ideal:9/16},
+     resizeMode:'none'
+    };
+    stream=await navigator.mediaDevices.getUserMedia({audio:false,video:opcionesVideo});
    }catch(firstError){
     // Algunos teléfonos no aceptan las restricciones preferidas; probar cámara predeterminada.
     if(['NotFoundError','OverconstrainedError'].includes(firstError?.name)){
-     stream=await navigator.mediaDevices.getUserMedia({audio:false,video:true});
+     // Si no hay vídeo 9:16 nativo, conservar la cámara frontal disponible,
+     // sin efectuar recortes ni deformaciones para forzar otra proporción.
+     stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'user'},resizeMode:'none'}});
     }else throw firstError;
    }
   }
