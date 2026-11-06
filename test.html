@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
 <title>FlappyAby</title>
+<meta name="flappyaby-version" content="camara-nativa-20261106">
 <style>
 :root{color-scheme:dark;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
 *{box-sizing:border-box}
@@ -59,9 +60,9 @@ canvas{width:100%;height:100%;display:block;image-rendering:pixelated;background
 @media(prefers-reduced-motion:reduce){.boost-overlay.show,.boost-rays,.boost-overlay.show .boost-card{animation:none}.boost-overlay.show{opacity:1}.boost-card{transform:scale(1)}}
 
 /* Vista previa de cámara frontal, integrada con la interfaz rosa. */
-.camera-box{position:absolute;left:11px;bottom:76px;width:105px;height:134px;z-index:2;overflow:hidden;border-radius:15px;border:3px solid #fff;background:linear-gradient(150deg,#ffeaf5,#f4b1d1);box-shadow:0 0 0 3px #e67bae,0 5px 13px #8847677c;pointer-events:none;isolation:isolate}
+.camera-box{position:absolute;left:11px;bottom:76px;width:105px;height:174px;z-index:2;overflow:hidden;border-radius:15px;border:3px solid #fff;background:linear-gradient(150deg,#ffeaf5,#f4b1d1);box-shadow:0 0 0 3px #e67bae,0 5px 13px #8847677c;pointer-events:none;isolation:isolate}
 .camera-box::after{content:'';position:absolute;inset:0;border:1px solid #ffffff70;border-radius:11px;pointer-events:none}
-.camera-video{width:100%;height:100%;display:block;object-fit:cover;transform:scaleX(-1);background:#f9d0e4}
+.camera-video{width:100%;height:100%;display:block;object-fit:contain;object-position:center;background:#f9d0e4}
 .camera-box[data-active="true"] .camera-video{display:block}
 .camera-label{position:absolute;top:5px;left:5px;padding:3px 7px;border-radius:8px;background:#d53d83d9;border:1px solid #fff8;font-size:9px;font-weight:1000;color:white;letter-spacing:.05em;text-shadow:0 1px #8c255d;z-index:1}
 .camera-indicator{display:inline-block;width:5px;height:5px;vertical-align:middle;margin-right:3px;border-radius:50%;background:#ffe6f3}
@@ -73,13 +74,13 @@ canvas{width:100%;height:100%;display:block;image-rendering:pixelated;background
 .loss-photo-section[hidden]{display:none!important}
 .loss-photo-section{margin:4px auto 13px;max-width:228px;padding:9px 10px 10px;border:2px solid #f4a1cb;border-radius:16px;background:#fff6fbdc;box-shadow:0 2px 0 #eeb2d2}
 .loss-photo-heading{display:block;margin:0 0 6px;font-size:11px;font-weight:1000;color:#b64986;letter-spacing:.05em}
-.loss-photo-img{display:block;max-width:100%;max-height:145px;object-fit:contain;margin:auto;border-radius:9px;border:2px solid #fff;box-shadow:0 0 0 2px #eba0ca;background:#eed9e6}
+.loss-photo-img{display:block;max-width:100%;max-height:min(31dvh,215px);object-fit:contain;margin:auto;border-radius:9px;border:2px solid #fff;box-shadow:0 0 0 2px #eba0ca;background:#eed9e6}
 .loss-photo-img[hidden]{display:none!important}
 .loss-photo-fallback{font-size:11px;font-weight:700;color:#985879;line-height:1.3}
 .loss-photo-fallback[hidden]{display:none!important}
 .camera-disclosure{font-size:10px!important;line-height:1.3!important;margin:0 auto 12px!important;color:#985d80!important}
 .panel{max-height:calc(100dvh - 34px);overflow-y:auto;overscroll-behavior:contain}
-@media(max-width:380px){.camera-box{left:8px;bottom:75px;width:91px;height:119px}.camera-placeholder{font-size:9px;padding:29px 6px 5px}}
+@media(max-width:380px){.camera-box{left:8px;bottom:75px;width:91px;height:153px}.camera-placeholder{font-size:9px;padding:29px 6px 5px}}
 
 /* Ventana final compacta: mensaje de premio y foto visibles en una captura. */
 .panel[data-state="won"]{padding:11px 12px 13px}
@@ -91,7 +92,7 @@ canvas{width:100%;height:100%;display:block;image-rendering:pixelated;background
 .panel[data-state="won"] .panel-progress-track{height:10px;margin-bottom:9px}
 .panel[data-state="won"] .loss-photo-section{margin:3px auto 9px;padding:5px 8px 6px;max-width:210px}
 .panel[data-state="won"] .loss-photo-heading{margin-bottom:4px;font-size:10px}
-.panel[data-state="won"] .loss-photo-img{max-height:112px}
+.panel[data-state="won"] .loss-photo-img{max-height:min(28dvh,190px)}
 .panel[data-state="won"] button{min-height:43px}
 .panel[data-state="won"] .tip{margin-top:7px!important;font-size:9px!important}
 
@@ -141,7 +142,6 @@ canvas{width:100%;height:100%;display:block;image-rendering:pixelated;background
     </div>
     <button id="startButton">📷 ACTIVAR CÁMARA Y JUGAR</button>
     <p class="tip" id="panelTip">✦ Toca, haz clic o pulsa ESPACIO para aletear ✦</p>
-    <p class="camera-disclosure">📸 Al finalizar, se enviarán tu foto, puntos y resultado al servidor del juego.</p>
   </div>
 </div>
 </div>
@@ -162,6 +162,12 @@ const OBSTACULOS_PARA_GANAR = 100;
 // Tiempo de espera para la foto de reacción (segundos). Cambia solo este número.
 const SEGUNDOS_FOTOREACCION = 2;
 const REACTION_DELAY_MS = SEGUNDOS_FOTOREACCION * 1000;
+// Fotografía nativa de la cámara si el navegador lo permite.
+// No se cambia el ancho, alto, relación de aspecto ni el encuadre.
+// Solo se comprime el JPEG (sin cambiar resolución) si pesa más del umbral.
+const FOTO_PESO_MAXIMO_BYTES = 2_000_000;
+const FOTO_CALIDAD_JPEG = 0.82;
+const TIEMPO_MAXIMO_FOTO_NATIVA_MS = 3500;
 // URL del webhook de n8n. Para producción, usar la URL /webhook/ correspondiente.
 const URL_ENDPOINT_RESULTADOS = 'https://n8n.intelixlabs.com/webhook/juego/flappyaby';
 const TIMEOUT_ENVIO_MS = 10000;
@@ -172,25 +178,36 @@ document.title=`FlappyAby — ${TARGET} obstáculos para ganar`;
  
 
 let state='ready', birdY=H*.44, vy=0, pipes=[], score=0, frame=0, elapsed=0, last=0, shake=0;
-// La velocidad cambia SOLO al pasar bloques de 10 obstáculos.
-// Del obstáculo 0 al 9 es inicial; al llegar a 90 se alcanza 100% (3.75).
-const gravity=.36, jump=-6.25, BASE_SPEED=2.25, MAX_SPEED=3.75;
-const SPEED_STEP=10, FULL_SPEED_AT=90;
-function speedForScore(passed){
- const level=Math.min(FULL_SPEED_AT/SPEED_STEP,Math.floor(passed/SPEED_STEP));
- return BASE_SPEED+(MAX_SPEED-BASE_SPEED)*level/(FULL_SPEED_AT/SPEED_STEP);
+// BOOST cada 10 puntos hasta el 70, cada 5 en 75 y 80, y cada 3 desde ahí: 83, 86, 89, 92, 95 y 98.
+// La velocidad aumenta con el MISMO incremento en cada BOOST, sin tope artificial.
+// Solo termina de aumentar cuando acaba la partida (100 puntos).
+const gravity=.36, jump=-6.25, BASE_SPEED=2.25;
+const SPEED_STEP=10;
+const BOOST_CADA_5_DESDE=70, BOOST_CADA_3_DESDE=80;
+const BOOST_MEDIO_CADA=5, BOOST_FINAL_CADA=3;
+const INCREMENTO_VELOCIDAD_POR_BOOST=(3.75-BASE_SPEED)/9;
+function boostLevelForScore(passed){
+ const p=Math.max(0,passed);
+ const normales=Math.floor(Math.min(p,BOOST_CADA_5_DESDE)/SPEED_STEP);
+ const medios=Math.floor(Math.max(0,Math.min(p,BOOST_CADA_3_DESDE)-BOOST_CADA_5_DESDE)/BOOST_MEDIO_CADA);
+ const finales=Math.floor(Math.max(0,p-BOOST_CADA_3_DESDE)/BOOST_FINAL_CADA);
+ return normales+medios+finales;
 }
-// El hueco vertical baja exclusivamente con cada BOOST (cada 10 puntos).
-// En el último nivel se respeta el mínimo de 157 px para seguir maniobrando.
-const GAP_INICIAL=175, GAP_MINIMO=157, REDUCCION_GAP_POR_BOOST=3;
+function speedForScore(passed){
+ return BASE_SPEED+INCREMENTO_VELOCIDAD_POR_BOOST*boostLevelForScore(passed);
+}
+// Cada BOOST reduce 3 px el hueco; mínimo de 140 px.
+const GAP_INICIAL=175, GAP_MINIMO=140, REDUCCION_GAP_POR_BOOST=3;
 function gapForScore(passed){
- const boosts=Math.min(FULL_SPEED_AT/SPEED_STEP,Math.floor(passed/SPEED_STEP));
- return Math.max(GAP_MINIMO,GAP_INICIAL-boosts*REDUCCION_GAP_POR_BOOST);
+ return Math.max(GAP_MINIMO,GAP_INICIAL-boostLevelForScore(passed)*REDUCCION_GAP_POR_BOOST);
 }
 // Conserva una separación horizontal similar entre obstáculos, aunque aceleren.
 const PIPE_SPACING=BASE_SPEED*106;
 let speed=BASE_SPEED, scrollDistance=0, spawnedObstacles=0;
 let soundCtx, boostTimer=0, lastBoostLevel=0;
+// Volumen general más alto. Se pueden editar por separado sin cambiar la melodía.
+const VOLUMEN_MUSICA = 3.0;
+const VOLUMEN_EFECTOS = 1.9;
 // Música original sintetizada: no requiere archivos ni conexión.
 // Se toca solo durante la partida y no bloquea el resto del juego.
 let musicGain=null, musicInterval=null, musicStep=0, nextMusicTime=0;
@@ -206,7 +223,7 @@ function ensureAudio(){
  }catch(e){return null;}
 }
 function chirp(freq=700,dur=.08,type='sine'){
- try{const audio=ensureAudio();if(!audio)return;let osc=audio.createOscillator(),gain=audio.createGain();osc.type=type;osc.frequency.setValueAtTime(freq,audio.currentTime);osc.frequency.exponentialRampToValueAtTime(Math.max(90,freq*.65),audio.currentTime+dur);gain.gain.setValueAtTime(.085,audio.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audio.currentTime+dur);osc.connect(gain).connect(audio.destination);osc.start();osc.stop(audio.currentTime+dur)}catch(e){}
+ try{const audio=ensureAudio();if(!audio)return;let osc=audio.createOscillator(),gain=audio.createGain();osc.type=type;osc.frequency.setValueAtTime(freq,audio.currentTime);osc.frequency.exponentialRampToValueAtTime(Math.max(90,freq*.65),audio.currentTime+dur);gain.gain.setValueAtTime(.085*VOLUMEN_EFECTOS,audio.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audio.currentTime+dur);osc.connect(gain).connect(audio.destination);osc.start();osc.stop(audio.currentTime+dur)}catch(e){}
 }
 function playMusicNote(note,time,duration,shape,volume){
  if(note===null || !soundCtx || !musicGain)return;
@@ -240,7 +257,7 @@ function startMusic(){
  try{
   if(!musicGain){musicGain=audio.createGain();musicGain.gain.value=0;musicGain.connect(audio.destination);}
   musicGain.gain.cancelScheduledValues(audio.currentTime);
-  musicGain.gain.setTargetAtTime(.65,audio.currentTime,.035);
+  musicGain.gain.setTargetAtTime(.65*VOLUMEN_MUSICA,audio.currentTime,.035);
   musicStep=0;nextMusicTime=audio.currentTime+.06;
   musicTick();
   musicInterval=setInterval(musicTick,90);
@@ -311,7 +328,13 @@ async function startCamera(){
  try{
   if(!stream){
    try{
-    stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'user'},width:{ideal:480},height:{ideal:640}}});
+    stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{
+      facingMode:{ideal:'user'},
+      // Pedir el formato fotográfico habitual 4:3 y evitar el recorte
+      // que algunos navegadores aplican a las transmisiones de video.
+      aspectRatio:{ideal:4/3},
+      resizeMode:'none'
+     }});
    }catch(firstError){
     // Algunos teléfonos no aceptan las restricciones preferidas; probar cámara predeterminada.
     if(['NotFoundError','OverconstrainedError'].includes(firstError?.name)){
@@ -360,23 +383,85 @@ function clearLossPhoto(){
  lossPhoto.removeAttribute('src');
  lossPhoto.hidden=true;lossPhotoFallback.hidden=true;lossPhotoSection.hidden=true;
 }
-function captureResultPhoto(){
- lossPhotoSection.hidden=false;
- const canCapture=cameraIsReady();
- if(!canCapture){lossPhoto.hidden=true;lossPhotoFallback.hidden=false;return null;}
+function fotoBlobComoDataURL(blob){
+ return new Promise((resolve,reject)=>{
+  const reader=new FileReader();
+  reader.onload=()=>resolve(reader.result);
+  reader.onerror=()=>reject(reader.error||new Error('No se pudo leer la foto'));
+  reader.readAsDataURL(blob);
+ });
+}
+async function comprimirSinCambiarDimensiones(blob){
+ // El JPEG nativo ya está comprimido; conservarlo intacto si no es muy pesado.
+ if(blob.type==='image/jpeg' && blob.size<=FOTO_PESO_MAXIMO_BYTES)return blob;
  try{
-  const snap=document.createElement('canvas');
-  snap.width=Math.min(400,cameraVideo.videoWidth);
-  snap.height=Math.max(1,Math.round(snap.width*cameraVideo.videoHeight/cameraVideo.videoWidth));
-  const snapCtx=snap.getContext('2d');
-  // Espejo horizontal, igual que la vista previa de selfie.
-  snapCtx.translate(snap.width,0);snapCtx.scale(-1,1);
-  snapCtx.drawImage(cameraVideo,0,0,snap.width,snap.height);
-  const foto=snap.toDataURL('image/jpeg',.86);
+  // Decodificar conservando TODAS las dimensiones de la fotografía.
+  const bitmap=await createImageBitmap(blob);
+  try{
+   const canvasFoto=document.createElement('canvas');
+   canvasFoto.width=bitmap.width;
+   canvasFoto.height=bitmap.height;
+   const ctxFoto=canvasFoto.getContext('2d');
+   if(!ctxFoto)throw new Error('Canvas no disponible');
+   ctxFoto.drawImage(bitmap,0,0); // Sin escalar, recortar, girar ni aplicar zoom.
+   return await new Promise((resolve,reject)=>
+    canvasFoto.toBlob(b=>b?resolve(b):reject(new Error('Error JPEG')),'image/jpeg',FOTO_CALIDAD_JPEG)
+   );
+  }finally{bitmap.close?.();}
+ }catch(err){
+  console.warn('Se conserva el archivo fotográfico original:',err);
+  return blob;
+ }
+}
+function capturarFotogramaCompleto(){
+ // Respaldo para navegadores sin ImageCapture. MISMA resolución del video.
+ const w=cameraVideo.videoWidth,h=cameraVideo.videoHeight;
+ if(!w||!h)throw new Error('Video sin dimensiones');
+ const snap=document.createElement('canvas');
+ snap.width=w;
+ snap.height=h;
+ const ctxSnap=snap.getContext('2d');
+ if(!ctxSnap)throw new Error('Canvas no disponible');
+ ctxSnap.drawImage(cameraVideo,0,0); // Sin escalado, recorte ni espejo.
+ return snap.toDataURL('image/jpeg',FOTO_CALIDAD_JPEG);
+}
+async function captureResultPhoto(){
+ lossPhotoSection.hidden=false;
+ if(!cameraIsReady()){
+  lossPhoto.hidden=true;lossPhotoFallback.hidden=false;
+  return null;
+ }
+ try{
+  let foto=null;
+  const track=cameraStream?.getVideoTracks()[0];
+  // Chrome Android: ImageCapture toma una FOTO real con el encuadre de la cámara,
+  // no un fotograma de video cuyo formato podría estar recortado a 9:16.
+  if(track?.readyState==='live' && typeof ImageCapture!=='undefined'){
+   try{
+    const capturador=new ImageCapture(track);
+    let timer;
+    const vencimiento=new Promise((_,reject)=>{
+     timer=setTimeout(()=>reject(new Error('La foto nativa tardó demasiado')),TIEMPO_MAXIMO_FOTO_NATIVA_MS);
+    });
+    let blob;
+    try{blob=await Promise.race([capturador.takePhoto(),vencimiento]);}
+    finally{clearTimeout(timer);}
+    if(blob && blob.size>0){
+     foto=await fotoBlobComoDataURL(await comprimirSinCambiarDimensiones(blob));
+    }
+   }catch(err){
+    console.warn('Foto nativa no disponible; se usa el fotograma completo:',err);
+   }
+  }
+  if(!foto)foto=capturarFotogramaCompleto();
   lossPhoto.src=foto;
   lossPhoto.hidden=false;lossPhotoFallback.hidden=true;
   return foto;
- }catch(err){lossPhoto.hidden=true;lossPhotoFallback.hidden=false;return null;}
+ }catch(err){
+  console.warn('No fue posible tomar la fotografía:',err);
+  lossPhoto.hidden=true;lossPhotoFallback.hidden=false;
+  return null;
+ }
 }
 // Envía el resultado como JSON. La imagen JPEG se envía directamente en Base64
 // (sin prefijo data:image/jpeg;base64,) dentro de la propiedad "foto".
@@ -417,7 +502,7 @@ function panel(title,text,icon,cta){
 function triggerBoost(level){
  if(level<=0)return;
  if(boostTimer)clearTimeout(boostTimer);
- const ratio=Math.round(((speed-BASE_SPEED)/(MAX_SPEED-BASE_SPEED))*100);
+ const ratio=Math.round((speed/BASE_SPEED-1)*100);
  boostText.textContent=`¡Velocidad +${ratio}%!`;
  boostLevel.textContent=`Nivel ${level+1} · ${score} puntos`;
  boostOverlay.classList.remove('show');
@@ -460,7 +545,26 @@ async function reset(){
   }
  }
 }
-function flap(){if(state==='playing'){vy=jump;chirp(620,.055)}}
+// Vibración progresiva desde los 60 puntos: aumenta con cada BOOST real.
+// BOOST en 60 y 70, luego en 75 y 80; desde entonces en 83, 86, 89, 92, 95 y 98.
+// Sin vibración antes de los 60. Si el teléfono no admite vibración, no interrumpe el juego.
+const PUNTOS_INICIO_VIBRACION = 60;
+const DURACION_VIBRACION_INICIAL_MS = 45;
+const AUMENTO_VIBRACION_POR_BOOST_MS = 15;
+function duracionVibracionParaPuntos(puntos){
+ if(puntos<PUNTOS_INICIO_VIBRACION)return 0;
+ const boostsDesde60=boostLevelForScore(puntos)-boostLevelForScore(PUNTOS_INICIO_VIBRACION);
+ return DURACION_VIBRACION_INICIAL_MS + boostsDesde60*AUMENTO_VIBRACION_POR_BOOST_MS;
+}
+function flap(){
+ if(state!=='playing')return;
+ vy=jump;
+ chirp(620,.055);
+ const duracionMs=duracionVibracionParaPuntos(score);
+ if(duracionMs>0 && typeof navigator.vibrate==='function'){
+  try{navigator.vibrate(duracionMs);}catch(_error){/* vibración no disponible */}
+ }
+}
 // Solo el botón REINTENTAR reinicia una partida perdida: los toques y la
 // barra espaciadora usados para aletear no deben reiniciar al chocar.
 let defeatAt=-Infinity;
@@ -489,12 +593,13 @@ function finalizarPartida(status){
  if(!gano){shake=9;chirp(190,.28,'sawtooth');}
  else{vy=0;chirp(880,.14);setTimeout(()=>chirp(1100,.15),140);setTimeout(()=>chirp(1400,.25),310);}
  if(finishTimer)clearTimeout(finishTimer);
- finishTimer=setTimeout(()=>{
+ finishTimer=setTimeout(async ()=>{
   finishTimer=null;
   if(state!=='finishing')return;
-  // Primero se captura la reacción, después se muestra el resultado.
-  // La cámara permanece activa para el siguiente intento.
-  const foto=captureResultPhoto();
+  // La foto real se toma tras los segundos configurados, sin alterar tamaño.
+  // Si la cámara no admite foto fija, se usa el fotograma de video completo.
+  const foto=await captureResultPhoto();
+  if(state!=='finishing')return;
   state=gano?'won':'lost';
   if(gano){
    panel('¡GANASTE! 🎉','¡Acabas de ganar un carrito de SHEIN / ROMWE por $1,000 MXN! Mándale esta captura de pantalla a Alex para reclamar tu premio.','🏆','VOLVER A JUGAR');
@@ -552,10 +657,10 @@ function update(dt){
     p.passed=true;
     score++;
     scoreEl.textContent=score;
-    // 0–9: inicial; 10–19: nivel 1; ...; 90–99: máxima.
+    // BOOST cada 10 hasta 70, cada 5 hasta 80 y cada 3 desde 80 (83, 86, 89, 92, 95 y 98).
     speed=speedForScore(score);
-    const boostLevelNow=Math.floor(Math.min(score,FULL_SPEED_AT)/SPEED_STEP);
-    if(score>0 && score<=FULL_SPEED_AT && score%SPEED_STEP===0 && boostLevelNow>lastBoostLevel){
+    const boostLevelNow=boostLevelForScore(score);
+    if(score>0 && score<TARGET && boostLevelNow>lastBoostLevel){
       lastBoostLevel=boostLevelNow;
       triggerBoost(boostLevelNow);
     }
